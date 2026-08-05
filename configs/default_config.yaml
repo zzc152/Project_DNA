@@ -1,0 +1,38 @@
+# BioDesign-Agent Module 1 知识抽取配置
+model:
+  path: "./Qwen2.5-7B-Instruct"   # 本地模型路径（相对项目根目录）
+  dtype: float16                  # 半精度推理
+  device_map: "auto"              # 自动分配到多 GPU（4×4090）
+  local_files_only: true          # 禁止联网下载
+
+extraction:
+  batch_size: 8                   # 批量推理大小（8-16 建议）
+  max_new_tokens: 256
+  temperature: 0.1
+  use_chat_template: true         # 使用 Qwen chat 模板
+
+data:
+  raw: "data/raw/abstracts.jsonl"
+  samples: "data/samples/test_abstracts.jsonl"
+  processed_raw: "data/processed/raw_extractions.jsonl"
+  knowledge_base: "data/processed/knowledge_base.jsonl"
+
+# ============ Module 1 MPRA 知识库 ============
+# 数据: Gosai et al. MPRA（640,029 条 200nt 序列，3 细胞系活性）
+# y_train 3 列顺序: K562 (erythroid precursors), HepG2 (hepatocytes), SK-N-SH (neuroblastoma)
+mpra:
+  h5_path: "/workspace/zzc/explain_D3/training_zoo/MPRA/data_and_oracle/mpra_data.h5"
+  cell_lines: ["K562", "HepG2", "SK-N-SH"]
+  x_key: "x_train"
+  y_key: "y_train"
+  # 步骤 1: 高/低活性组划分
+  high_quantile: 0.90            # 高活性组 = 活性 ≥ p90
+  low_quantile: 0.10             # 低活性组 = 活性 ≤ p10
+  max_per_group: 20000           # 每组最多采样序列数
+  split_seed: 42
+  # 步骤 2: 基序富集（fimo）
+  fimo: "/workspace/zzc/envs/explain_D3/bin/fimo"
+  jaspar_meme: "/workspace/zzc/explain_D3/visualize/JASPAR2024_CORE_vertebrates_non-redundant_pfms_meme.txt"
+  fimo_pvalue: 1e-4
+  # 输出目录（相对项目根目录）
+  output_dir: "data/processed"
