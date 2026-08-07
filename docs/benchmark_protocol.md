@@ -156,8 +156,9 @@
 
 | 优先级 | 任务 | 状态 |
 |--------|------|------|
-| **P0-a** | **Claim 矛盾检测**：给两条 claim，判断是否冲突/一致/无关 | 🔄 本文档配套实现 |
-| **P0-b** | **Evidence-level 推理**：给证据（如 RNA-seq 上调），判断能否推出结论（如"X 调节 promoter 活性"→ 不能） | 🔄 本文档配套实现 |
+| **P0-a** | **Claim 矛盾检测**：给两条 claim，判断是否冲突/一致/无关 | ✅ 实现 + 验证（`l3_benchmark_p0.py`） |
+| **P0-b** | **Evidence-level 推理**：给证据（如 RNA-seq 上调），判断能否推出结论（如"X 调节 promoter 活性"→ 不能） | ✅ 实现 + 验证（`l3_benchmark_p0.py`） |
+| **L1/L2** | **完整层级扩展**：L1 知识回忆（单跳零上下文）+ L2 知识关联（双跳带细胞系），不给 claim/摘要/推理链 | ✅ 实现 + 验证（`l12_benchmark.py`） |
 | P1 | Human baseline（5 人 × 100 题，出答题表） | 待办 |
 | P2 | Adversarial 同义改写（同一事实换表达） | 待办 |
 | P2 | 方案2：D 档扩样（10.4% → ~30%） | 待办 |
@@ -185,4 +186,4 @@ python scripts/verify_l3_v2.py
 
 ---
 
-*文档状态：模块三基线版 v2.1 固化（2026-08-07）。P0 新题型见 `src/data_synthesis/l3_benchmark_p0.py` 与配套说明。*
+*文档状态：模块三基线版 v2.1 固化（2026-08-07）。P0 新题型见 `src/data_synthesis/l3_benchmark_p0.py` 与配套说明（`docs/p0_question_types.md`）；L1/L2 层级扩展见 `src/data_synthesis/l12_benchmark.py` 与配套说明（`docs/l12_question_types.md`）。*
