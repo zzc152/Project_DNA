@@ -7,7 +7,7 @@
     - 保存 gc_analysis_<CELL>.csv + gc_summary.json
 
 用法（项目根目录）:
-    python scripts/run_gc_analysis.py
+    python scripts/analysis/run_gc_analysis.py
 """
 
 from __future__ import annotations

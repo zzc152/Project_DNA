@@ -14,7 +14,7 @@
 后续字段为 MC/XRC/MD 模拟来源的补充参数（本分析不使用）。
 
 用法（项目根目录）:
-    python scripts/extract_dna_shape_table.py [--source <TableCompiler.cpp>] [--out <tsv>]
+    python scripts/extract/extract_dna_shape_table.py [--source <TableCompiler.cpp>] [--out <tsv>]
 """
 
 from __future__ import annotations

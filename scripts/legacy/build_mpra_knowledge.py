@@ -1,4 +1,9 @@
-"""MPRA 知识库 · 步骤 4：构建 knowledge_base.jsonl（MPRA 部分）。
+"""[DEPRECATED] MPRA 知识库 · 步骤 4：构建 knowledge_base.jsonl（MPRA 部分）。
+
+⚠️ 已废弃：本脚本产出旧版三元组格式。
+项目现统一使用 claim 版本知识库（knowledge_base_stat.jsonl，8 键 schema），
+由 scripts/build/build_stat_claims.py + scripts/build/build_literature_claims.py 构建。
+旧文件已移至 data/backup/。请勿再使用本脚本。
 
 从步骤 2（motif_enrichment_<CELL>.csv）与步骤 3（gc_summary.json）结果
 生成知识三元组，输出 data/processed/knowledge_base_mpra.jsonl。
@@ -6,8 +11,8 @@
 三元组 schema: {head, relation, tail, source, statistic, cell_line, description}
 
 用法（项目根目录）:
-    python scripts/build_mpra_knowledge.py
-    python scripts/build_mpra_knowledge.py --merge   # 与 PubMed 抽取知识库合并
+    python scripts/legacy/build_mpra_knowledge.py
+    python scripts/legacy/build_mpra_knowledge.py --merge   # 与 PubMed 抽取知识库合并
 """
 
 from __future__ import annotations

@@ -109,6 +109,8 @@ class BioExtractor:
         max_new_tokens: int = 256,
         temperature: float = 0.1,
         use_chat_template: bool = True,
+        prompt_builder=None,
+        fields: tuple = EXPECTED_FIELDS,
     ) -> list[dict]:
         """批量抽取。
 
@@ -118,6 +120,12 @@ class BioExtractor:
             max_new_tokens: 最大生成 token 数
             temperature: 采样温度（任务要求 0.1）
             use_chat_template: True 使用 apply_chat_template，否则用字符串拼接
+            prompt_builder: 可选。自定义 prompt 构造器
+                （callable: abstract -> messages 或 prompt 字符串）。
+                默认使用 prompts.build_messages / build_prompt。
+            fields: 可选。输出字段元组（默认 EXPECTED_FIELDS）。
+                对每个字段，若解析结果含该 key 则保留原值，
+                否则给默认值（relation 给空串，其余给空列表）。
 
         Returns:
             结果列表，每个元素包含 pmid、抽取字段以及解析状态与原始输出。
@@ -127,7 +135,16 @@ class BioExtractor:
         total = len(items)
         for i in range(0, total, batch_size):
             batch = items[i : i + batch_size]
-            results.extend(self._extract_one_batch(batch, max_new_tokens, temperature, use_chat_template))
+            results.extend(
+                self._extract_one_batch(
+                    batch,
+                    max_new_tokens,
+                    temperature,
+                    use_chat_template,
+                    prompt_builder=prompt_builder,
+                    fields=fields,
+                )
+            )
             logger.info("进度: %d/%d", min(i + batch_size, total), total)
 
         return results
@@ -139,11 +156,26 @@ class BioExtractor:
         max_new_tokens: int = 256,
         temperature: float = 0.1,
         use_chat_template: bool = True,
+        prompt_builder=None,
+        fields: tuple = EXPECTED_FIELDS,
     ) -> list[dict]:
         """抽取单个批次，返回该批结果列表。供 OOM 降批重试时逐批调用。"""
         abstracts = [it.get("abstract", "") for it in batch]
 
-        if use_chat_template:
+        if prompt_builder is not None:
+            prompts = []
+            for a in abstracts:
+                built = prompt_builder(a)
+                # 支持两种返回：字符串（直接使用）或消息列表（走 chat template）
+                if isinstance(built, str):
+                    prompts.append(built)
+                else:
+                    prompts.append(
+                        self.tokenizer.apply_chat_template(
+                            built, tokenize=False, add_generation_prompt=True
+                        )
+                    )
+        elif use_chat_template:
             prompts = [
                 self.tokenizer.apply_chat_template(
                     build_messages(a),
@@ -182,23 +214,25 @@ class BioExtractor:
             parsed = parse_json_response(text)
             result: dict = {
                 "pmid": item.get("pmid"),
-                "tf": [],
-                "gene": [],
-                "motif": [],
-                "disease": [],
-                "relation": "",
                 "parsed": parsed is not None,
                 "raw_output": text,
             }
+            # 字段默认值：relation/mechanism 等字符串字段给空串，其余给空列表
+            for key in fields:
+                result[key] = "" if key in ("relation", "mechanism") else []
             if parsed is not None:
-                for key in EXPECTED_FIELDS:
-                    if key == "relation":
-                        result[key] = str(parsed.get(key, ""))
+                for key in fields:
+                    val = parsed.get(key)
+                    if val is None:
+                        continue
+                    if isinstance(val, list):
+                        result[key] = val
+                    elif isinstance(val, str):
+                        result[key] = val
+                    elif isinstance(val, dict):
+                        result[key] = val
                     else:
-                        val = parsed.get(key, [])
-                        result[key] = val if isinstance(val, list) else (
-                            [val] if val else []
-                        )
+                        result[key] = [val] if val else result[key]
             else:
                 logger.warning(
                     "JSON 解析失败 (pmid=%s): %s...",

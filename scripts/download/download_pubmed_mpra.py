@@ -11,8 +11,8 @@
 按主题优先级排序截断到 --total 条（默认 300）。
 
 用法（在项目根目录运行）:
-    python scripts/download_pubmed_mpra.py --output data/raw/abstracts_mpra.jsonl
-    python scripts/download_pubmed_mpra.py --max-results 80 --total 300 --min-year 2013
+    python scripts/download/download_pubmed_mpra.py --output data/raw/abstracts_mpra.jsonl
+    python scripts/download/download_pubmed_mpra.py --max-results 80 --total 300 --min-year 2013
 """
 
 import argparse

@@ -7,8 +7,8 @@
 并验证高低组活性差异显著。
 
 用法（项目根目录）:
-    python scripts/split_mpra_groups.py
-    python scripts/split_mpra_groups.py --config configs/default_config.yaml
+    python scripts/analysis/split_mpra_groups.py
+    python scripts/analysis/split_mpra_groups.py --config configs/default_config.yaml
 """
 
 from __future__ import annotations

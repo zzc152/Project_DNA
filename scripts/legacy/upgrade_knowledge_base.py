@@ -1,4 +1,9 @@
-"""升级知识库为"行动型"三元组（可指导模型生成）。
+"""[DEPRECATED] 升级知识库为"行动型"三元组（可指导模型生成）。
+
+⚠️ 已废弃：本脚本产出旧版三元组格式。
+项目现统一使用 claim 版本知识库（knowledge_base_stat.jsonl，8 键 schema），
+由 build_stat_claims.py + build_literature_claims.py 构建。
+旧文件已移至 data/backup/。请勿再使用本脚本。
 
 输入:
     data/processed/knowledge_base_mpra.jsonl  (40 条 MPRA 统计三元组)

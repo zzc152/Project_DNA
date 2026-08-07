@@ -1,0 +1,29 @@
+# L5 失败诊断与改进（Failure Diagnosis & Improvement）模板 —— 基于特征的归因与迭代
+# 能力：预设设计目标 + 失败序列特征 → 归因失败原因 → 提出改进方案。
+# 定位修正（2026-08-06）：不再泛泛"改进"，改为"目标-失败特征-归因-改进"的闭环诊断。
+
+- id: L5_001
+  level: L5
+  description: "Diagnose and fix unwanted high-activity feature"
+  instruction_template: |
+    设计目标：在 {cell_line} 中设计一条活性偏低的 {regulatory_element} 序列。
+    第一轮设计失败了：序列中出现了一个与目标冲突的高活性特征——{claim_text} 表明 {factor} 会 {evidence_direction} {regulatory_element} 活性，而该序列中恰好保留了 {factor} 相关结合特征。
+    请：
+    1. 诊断失败原因（该特征为何导致活性升高）；
+    2. 提出具体改进方案（如去除/替换该 {factor} 相关基序，说明修改位置）；
+    3. 说明修改后预期活性变化及依据。
+    输出格式：失败原因 / 改进方案 / 预期效果。三个要素缺一不可；且每个要素都要点名目标细胞系 {cell_line} 与元件 {regulatory_element}。
+  expected_output_type: "failure diagnosis + fix plan (3 parts)"
+  require_claim_type: [mechanistic, design_rule]
+  require_effect: [increases, required_for]
+
+- id: L5_002
+  level: L5
+  description: "Iterative refinement with verification experiment"
+  instruction_template: |
+    设计目标：在 {cell_line} 中设计一条活性偏高的 {regulatory_element} 序列。
+    第一轮 MPRA 结果显示活性仍低于基线。已知 {claim_text}（{factor} 调控 {regulatory_element}：{evidence_direction}）。
+    请提出第二轮改进方案（从 {factor} 相关特征的增强、组合或位置优化入手，结合 {reasoning_chain}），并设计一个验证实验（利用 {cell_line} 实验证据检验改进是否生效）。
+    输出格式：改进方案（2-3 句）+ 验证实验设计（2-3 句）。两部分缺一不可；且必须点名目标细胞系 {cell_line} 与元件 {regulatory_element}。
+  expected_output_type: "improvement plan + verification experiment"
+  require_claim_type: [mechanistic, design_rule]

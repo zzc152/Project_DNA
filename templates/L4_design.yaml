@@ -1,0 +1,42 @@
+# L4 设计准则（Design Criteria）模板 —— 条件推理 + 准则生成
+# 能力：根据 design_rule 输出"一个合格设计应满足的条件清单"（文本推理，不生成 DNA 序列）。
+# 定位修正（2026-08-06）：L4 不做序列生成——LLM 无法可靠生成 200bp 碱基序列；
+# 改为输出"设计准则"（必要条件清单），由后续步骤按准则构造序列。
+
+- id: L4_001
+  level: L4
+  description: "Design criteria for high activity (factor inclusion)"
+  instruction_template: |
+    根据以下设计建议：{claim_text}
+    在 {cell_line} 细胞背景下，若要设计一条倾向高活性的 {regulatory_element} 序列，一个合格的设计应满足哪些条件？
+    请以"设计准则"形式列出 3-5 条必要条件，覆盖：应包含的 {factor} 相关特征、应避免的特征、应满足的统计性质；并给出每条准则的依据（结合 {factor} 的调控作用与 {reasoning_chain}）。
+    输出格式：每条准则必须点名目标细胞系 {cell_line} 与元件 {regulatory_element}（如"在 {cell_line} 的 {regulatory_element} 设计中，应……"），禁止只写泛化规则。
+    硬性约束：严禁使用"虽然文献未直接提及/文献中没有/尽管文献未…但…"自补句式；给定推理链中没有的事实一律不得出现，宁可少写一条准则也不要编造。
+  expected_output_type: "design criteria checklist (3-5 conditions with rationale)"
+  require_claim_type: design_rule
+  require_effect: [increases, required_for]
+
+- id: L4_002
+  level: L4
+  description: "Design criteria avoiding repressive feature"
+  instruction_template: |
+    根据以下设计建议：{claim_text}
+    在 {cell_line} 细胞背景下，若要设计一条不被 {factor} 抑制的 {regulatory_element} 序列，它应满足哪些设计条件？
+    请以"设计准则"形式列出 3-5 条必要条件，重点说明如何避免 {factor} 相关抑制特征（依据 {reasoning_chain}），并给出每条准则的文献依据。
+    输出格式：每条准则必须点名目标细胞系 {cell_line} 与元件 {regulatory_element}，禁止只写泛化规则。
+    硬性约束：严禁使用"虽然文献未直接提及/文献中没有/尽管文献未…但…"自补句式；给定推理链中没有的事实一律不得出现，宁可少写一条准则也不要编造。
+  expected_output_type: "design criteria checklist (avoidance-focused)"
+  require_claim_type: design_rule
+  require_effect: [decreases]
+
+- id: L4_003
+  level: L4
+  description: "Design criteria from motif enrichment statistics"
+  instruction_template: |
+    统计结论：{claim_text}
+    在 {cell_line} 中，若要设计一条高活性的 enhancer 序列，应遵循哪些设计准则？
+    请基于 {tf} 结合基序（{motif}）的富集统计（OR={effect_size}），以"设计准则"形式列出 3-5 条必要条件，说明基序的放置位置、密度与组合方式。
+    输出格式：每条准则必须点名目标细胞系 {cell_line} 与元件 enhancer，禁止只写泛化规则。
+    硬性约束：严禁使用"虽然文献未直接提及/文献中没有/尽管文献未…但…"自补句式；给定推理链中没有的事实一律不得出现，宁可少写一条准则也不要编造。
+  expected_output_type: "design criteria checklist (motif-based)"
+  require_claim_type: association

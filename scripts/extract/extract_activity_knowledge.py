@@ -1,9 +1,12 @@
-"""Module 1 知识抽取入口脚本。
+"""文献知识源（Source 2）抽取入口：三系调控元件活性影响原因。
 
-用法（在项目根目录 /workspace/zzc/BioDesign-Agent 下运行）:
-    python scripts/extract_knowledge.py                          # 全量抽取
-    python scripts/extract_knowledge.py --limit 10               # 仅前 10 条（小批量测试）
-    python scripts/extract_knowledge.py --input data/samples/test_abstracts.jsonl
+使用本地 Qwen2.5-7B-Instruct 从 abstracts_activity.jsonl 中抽取
+"什么因素/机制影响调控元件活性"的结构化知识（findings 列表）。
+
+用法（项目根目录 /workspace/zzc/BioDesign-Agent 下运行）:
+    python scripts/extract/extract_activity_knowledge.py                          # 全量抽取
+    python scripts/extract/extract_activity_knowledge.py --limit 10               # 仅前 10 条
+    python scripts/extract/extract_activity_knowledge.py --input data/raw/abstracts_activity.jsonl
 """
 
 import argparse
@@ -11,7 +14,6 @@ import json
 import logging
 import sys
 import time
-from collections import Counter
 from pathlib import Path
 
 import torch
@@ -22,13 +24,17 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.extraction.extractor import BioExtractor  # noqa: E402
+from src.extraction.prompts_activity import build_activity_messages  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("extract_knowledge")
+logger = logging.getLogger("extract_activity_knowledge")
+
+# 输出字段（BioExtractor 动态字段支持）
+ACTIVITY_FIELDS = ("findings",)
 
 
 def load_abstracts(path: Path) -> list[dict]:
@@ -47,12 +53,12 @@ def load_abstracts(path: Path) -> list[dict]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="从 PubMed 摘要抽取 DNA 调控知识")
-    parser.add_argument("--input", default="data/raw/abstracts.jsonl", help="输入摘要 jsonl")
-    parser.add_argument("--output", default="data/processed/raw_extractions.jsonl", help="输出 jsonl")
+    parser = argparse.ArgumentParser(description="从 PubMed 摘要抽取三系调控元件活性影响原因知识")
+    parser.add_argument("--input", default="data/raw/abstracts_activity.jsonl", help="输入摘要 jsonl")
+    parser.add_argument("--output", default="data/processed/activity_extractions.jsonl", help="输出 jsonl")
     parser.add_argument("--model", default="./Qwen2.5-7B-Instruct", help="本地模型路径")
     parser.add_argument("--batch-size", type=int, default=8, help="批量推理大小")
-    parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument("--max-new-tokens", type=int, default=512)
     parser.add_argument("--temperature", type=float, default=0.1)
     parser.add_argument("--limit", type=int, default=0, help="只处理前 N 条（0=全部）")
     parser.add_argument("--no-chat-template", action="store_true", help="使用字符串拼接提示词")
@@ -63,7 +69,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # 解析 max_memory（键自动转整数，如 '{"0": "8GiB"}' → {0: "8GiB"})
+    # 解析 max_memory（键自动转整数）
     max_memory = None
     if args.max_memory:
         try:
@@ -90,21 +96,28 @@ def main() -> None:
 
     extractor = BioExtractor(model_path=args.model, max_memory=max_memory)
 
-    # 断点续跑：输出文件里已有的 pmid 直接跳过
+    # 断点续跑：只跳过解析成功的条目（parsed=true）；解析失败的允许下次重试
     done_pmids: set[str] = set()
+    n_failed_prev = 0
     if output_path.exists():
         for line in output_path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if not line:
                 continue
             try:
-                done_pmids.add(str(json.loads(line).get("pmid")))
+                rec = json.loads(line)
             except json.JSONDecodeError:
-                pass
-        logger.info("断点续跑：已有 %d 条完成，跳过", len(done_pmids))
+                continue
+            if rec.get("parsed"):
+                done_pmids.add(str(rec.get("pmid")))
+            else:
+                n_failed_prev += 1
+        logger.info("断点续跑：已有 %d 条解析成功（跳过），%d 条解析失败将重试",
+                    len(done_pmids), n_failed_prev)
 
     pending = [it for it in items if str(it.get("pmid")) not in done_pmids]
-    logger.info("待处理 %d 条（batch_size=%d, temperature=%.1f）...", len(pending), args.batch_size, args.temperature)
+    logger.info("待处理 %d 条（batch_size=%d, temperature=%.1f）...",
+                len(pending), args.batch_size, args.temperature)
     if not pending:
         logger.info("全部已完成，无需抽取")
         sys.exit(0)
@@ -115,7 +128,7 @@ def main() -> None:
     for i in range(0, len(pending), batch_size):
         batch = pending[i : i + batch_size]
 
-        # OOM 自动降批重试（不中断整个进程；若降到 1 仍失败则跳过该条，绝不 crash）
+        # OOM 自动降批重试（不中断整个进程；若降到 1 仍失败则跳过该条）
         current_bs = batch_size
         batch_results = None
         while batch_results is None:
@@ -125,13 +138,14 @@ def main() -> None:
                     max_new_tokens=args.max_new_tokens,
                     temperature=args.temperature,
                     use_chat_template=not args.no_chat_template,
+                    prompt_builder=build_activity_messages,
+                    fields=ACTIVITY_FIELDS,
                 )
             except torch.cuda.OutOfMemoryError:
                 torch.cuda.empty_cache()
                 current_bs = max(1, current_bs // 2)
                 logger.warning("OOM! 降批至 %d 重试 (pmid=%s...)", current_bs, batch[0].get("pmid"))
                 if current_bs == 1:
-                    # 单条也 OOM：跳过这一条，不阻塞整体
                     logger.warning("单条仍 OOM，跳过 pmid=%s", batch[0].get("pmid"))
                     batch_results = []
 
@@ -139,63 +153,20 @@ def main() -> None:
         with open(output_path, "a", encoding="utf-8") as f:
             for r in batch_results:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
         results.extend(batch_results)
 
-        # 当前批次可能因 OOM 只处理了一部分，若 batch 未耗尽需继续下一小批
-        if current_bs < batch_size and batch_results:
-            remaining = batch[current_bs:]
-            while remaining:
-                try:
-                    sub = extractor._extract_one_batch(
-                        remaining[:1],
-                        max_new_tokens=args.max_new_tokens,
-                        temperature=args.temperature,
-                        use_chat_template=not args.no_chat_template,
-                    )
-                    with open(output_path, "a", encoding="utf-8") as f:
-                        for r in sub:
-                            f.write(json.dumps(r, ensure_ascii=False) + "\n")
-                    results.extend(sub)
-                    remaining = remaining[1:]
-                except torch.cuda.OutOfMemoryError:
-                    torch.cuda.empty_cache()
-                    logger.warning("OOM! 单条跳过 pmid=%s", remaining[0].get("pmid"))
-                    remaining = remaining[1:]
-
-        logger.info("进度: %d/%d", min(i + batch_size, len(pending)), len(pending))
-
+    # 统计
+    n_ok = sum(1 for r in results if r.get("parsed"))
+    n_findings = sum(len(r.get("findings") or []) for r in results)
+    n_empty = sum(1 for r in results if not (r.get("findings") or []))
     elapsed = time.time() - start
-
-    # 统计信息
-    total = len(results)
-    success = sum(1 for r in results if r.get("parsed"))
-    rate = success / total * 100 if total else 0
-    tf_cnt = sum(len(r.get("tf", [])) for r in results)
-    gene_cnt = sum(len(r.get("gene", [])) for r in results)
-    motif_cnt = sum(len(r.get("motif", [])) for r in results)
-    disease_cnt = sum(len(r.get("disease", [])) for r in results)
-    relation_cnt = sum(1 for r in results if r.get("relation"))
-
-    logger.info("=" * 60)
-    logger.info("抽取统计:")
-    logger.info("  总摘要数        : %d", total)
-    logger.info("  成功抽取数      : %d (%.1f%%)", success, rate)
-    logger.info("  转录因子实体数  : %d", tf_cnt)
-    logger.info("  靶基因实体数    : %d", gene_cnt)
-    logger.info("  结合基序实体数  : %d", motif_cnt)
-    logger.info("  疾病实体数      : %d", disease_cnt)
-    logger.info("  含调控关系数    : %d", relation_cnt)
-    logger.info("  总耗时          : %.1f s (平均 %.2f s/条)", elapsed, elapsed / total if total else 0)
-    logger.info("=" * 60)
-
-    # 实体频率 TOP10
-    all_entities = Counter()
-    for r in results:
-        for key in ("tf", "gene", "motif", "disease"):
-            for ent in r.get(key, []):
-                if ent:
-                    all_entities[str(ent)] += 1
-    logger.info("实体频率 TOP10: %s", all_entities.most_common(10))
+    logger.info("=" * 70)
+    logger.info("抽取完成: %d 条（解析成功 %d，含 findings %d 条，空结果 %d 条）",
+                len(results), n_ok, n_findings, n_empty)
+    logger.info("耗时 %.1f 分钟（%.1f 秒/条）", elapsed / 60, elapsed / max(len(results), 1))
+    logger.info("输出文件: %s", output_path)
+    logger.info("=" * 70)
 
 
 if __name__ == "__main__":

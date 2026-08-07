@@ -1,0 +1,37 @@
+# L2 知识关联（Knowledge Association）模板 —— 双跳推理
+# 能力：连接两个事实（因子↔元件↔细胞系 / 统计富集↔生物学含义）。答案短，无需 LLM 增强。
+
+- id: L2_001
+  level: L2
+  description: "Stat enrichment implies TF regulatory role"
+  instruction_template: |
+    统计结果显示：{claim_text}
+    其中 {tf} 结合基序（{motif}）在高活性序列中显著富集/耗尽。结合转录因子的调控功能，这说明在 {cell_line} 中 {tf} 结合位点与增强子活性之间存在什么关系？
+  expected_output_type: "short explanatory answer (association implication)"
+
+- id: L2_002
+  level: L2
+  description: "Cross-link factor and evidence direction"
+  instruction_template: |
+    已知以下科学结论：{claim_text}
+    {factor} 的调控方向（{evidence_direction}）意味着什么？请结合 {cell_line} 细胞背景解释其对 {regulatory_element} 活性含义。
+  expected_output_type: "short explanatory answer (direction interpretation)"
+
+- id: L2_003
+  level: L2
+  description: "Reasoning chain condensation"
+  instruction_template: |
+    以下是一条科学结论及其推理链：
+    结论：{claim_text}
+    推理链：
+    {reasoning_chain}
+    请把推理链压缩成一句话的因果关联（因子→机制→活性结果）。
+  expected_output_type: "short one-sentence causal association"
+
+- id: L2_004
+  level: L2
+  description: "GC-rich motif enrichment implies GC-content preference"
+  instruction_template: |
+    统计结果显示：{claim_text}
+    其中 {tf} 结合基序（{motif}）属于{gc_class}。结合该基序自身的GC偏好（PWM中GC比例约{motif_gc}），请解释：在 {cell_line} 中，{tf} 结合位点的富集情况与序列GC含量之间存在什么关系？这一关系说明了 {tf} 结合位点更倾向出现在GC含量高还是低的序列中？
+  expected_output_type: "short explanatory answer (GC-content preference implication)"

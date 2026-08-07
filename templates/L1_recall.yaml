@@ -1,0 +1,26 @@
+# L1 知识回忆（Knowledge Recall）模板 —— 单跳事实检索
+# 能力：从知识库检索单个事实。答案短、确定性强，无需 LLM 增强。
+
+- id: L1_001
+  level: L1
+  description: "Recall factor effect direction"
+  instruction_template: |
+    根据以下科学结论：{claim_text}
+    因子 {factor} 对 {regulatory_element} 活性的影响方向是什么？请用一句话回答（如 increases / decreases / required_for / modulates / no_effect）。
+  expected_output_type: "short factual answer (one controlled-vocabulary term)"
+
+- id: L1_002
+  level: L1
+  description: "Recall factor target element and cell line"
+  instruction_template: |
+    根据以下科学结论：{claim_text}
+    因子 {factor} 影响哪个调控元件？该结论是在哪个细胞系中得出的？
+  expected_output_type: "short factual answer (regulatory_element + cell_line)"
+
+- id: L1_003
+  level: L1
+  description: "Recall mechanism sentence"
+  instruction_template: |
+    根据以下科学结论：{claim_text}
+    用一句话概括 {factor} 影响 {regulatory_element} 活性的机制。
+  expected_output_type: "short factual answer (mechanism summary)"

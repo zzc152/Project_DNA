@@ -15,7 +15,7 @@ data:
   raw: "data/raw/abstracts.jsonl"
   samples: "data/samples/test_abstracts.jsonl"
   processed_raw: "data/processed/raw_extractions.jsonl"
-  knowledge_base: "data/processed/knowledge_base.jsonl"
+  knowledge_base: "data/processed/knowledge_base_stat.jsonl"   # claim 版本（8 键 schema）
 
 # ============ Module 1 MPRA 知识库 ============
 # 数据: Gosai et al. MPRA（640,029 条 200nt 序列，3 细胞系活性）

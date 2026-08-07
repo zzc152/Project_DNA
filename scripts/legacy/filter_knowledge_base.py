@@ -1,4 +1,9 @@
-"""方案A: 分层过滤知识库，产出"干净"的行动型知识库。
+"""[DEPRECATED] 方案A: 分层过滤知识库，产出"干净"的行动型知识库。
+
+⚠️ 已废弃：本脚本产出旧版三元组格式（knowledge_base_actionable.jsonl）。
+项目现统一使用 claim 版本知识库（knowledge_base_stat.jsonl，8 键 schema），
+由 build_stat_claims.py + build_literature_claims.py 构建。
+旧文件已移至 data/backup/。请勿再使用本脚本。
 
 问题诊断（knowledge_base_actionable.jsonl, 3946 条）:
   1. 自指噪音 head==tail (140 条)

@@ -30,8 +30,8 @@ Claim schema:
 }
 
 用法（项目根目录）:
-    python scripts/build_stat_claims.py
-    python scripts/build_stat_claims.py --merge   # 追加到 knowledge_base.jsonl
+    python scripts/build/build_stat_claims.py
+    python scripts/build/build_stat_claims.py --merge   # 追加到 knowledge_base.jsonl
 """
 
 from __future__ import annotations

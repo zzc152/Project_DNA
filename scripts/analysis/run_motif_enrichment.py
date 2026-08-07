@@ -7,7 +7,7 @@
     - 保存 data/processed/motif_enrichment_<CELL>.csv
 
 用法（项目根目录）:
-    python scripts/run_motif_enrichment.py
+    python scripts/analysis/run_motif_enrichment.py
 """
 
 from __future__ import annotations

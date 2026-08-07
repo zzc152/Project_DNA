@@ -27,7 +27,7 @@ wc -l data/samples/test_abstracts.jsonl
 # 2. 小批量测试
 echo ""
 echo "===== 步骤2: 小批量测试（10 条）====="
-python scripts/extract_knowledge.py \
+python scripts/extract/extract_knowledge.py \
     --input data/samples/test_abstracts.jsonl \
     --output data/processed/raw_extractions_test.jsonl \
     --batch-size 4
@@ -39,15 +39,15 @@ head -2 data/processed/raw_extractions_test.jsonl
 # 3. 全量抽取
 echo ""
 echo "===== 步骤3: 全量抽取（500 条）====="
-python scripts/extract_knowledge.py \
+python scripts/extract/extract_knowledge.py \
     --input data/raw/abstracts.jsonl \
     --output data/processed/raw_extractions.jsonl \
     --batch-size 8
 
-# 4. 构建知识库
+# 4. 构建知识库（旧版三元组流程，已废弃，仅保留路径）
 echo ""
-echo "===== 步骤4: 构建知识三元组 ====="
-python scripts/build_knowledge_base.py \
+echo "===== 步骤4: 构建知识三元组（已废弃，请改用 build/ 下 claim 版本）====="
+python scripts/legacy/build_knowledge_base.py \
     --input data/processed/raw_extractions.jsonl \
     --output data/processed/knowledge_base.jsonl
 

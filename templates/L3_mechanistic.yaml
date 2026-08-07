@@ -1,0 +1,51 @@
+# L3 机制推理（Mechanistic Reasoning）模板 —— 多跳因果链解释
+# 能力：基于 reasoning_chain 逐步解释"为什么"。优先采样 claim_type=mechanistic。
+# 注意：模板占位符 {reasoning_chain} 由知识库字段直接填充，LLM 只做串联与润色，禁止编造新机制。
+
+- id: L3_001
+  level: L3
+  description: "Explain mechanism of factor effect (user-provided example)"
+  instruction_template: |
+    Given the following scientific fact: {claim_text}
+    Explain in a step-by-step manner why the presence of the {factor} factor might lead to the observed effect on {regulatory_element} activity in {cell_line} cells.
+    Use the reasoning chain: {reasoning_chain}.
+    Output format: numbered steps, each step one sentence, ending with a conclusion sentence.
+  expected_output_type: "multi-step explanation (numbered steps + conclusion)"
+  require_claim_type: mechanistic
+
+- id: L3_002
+  level: L3
+  description: "Chain-based causal explanation in Chinese"
+  instruction_template: |
+    已知科学结论：{claim_text}
+    请基于以下推理链，分步解释为什么 {factor} 会导致 {regulatory_element} 活性{effect}，并给出中间机制环节：
+    推理链：{reasoning_chain}
+    要求：每步一句话，机制必须严格来自推理链，不得引入知识库之外的机制；最后用"因此"总结。
+  expected_output_type: "multi-step causal explanation (Chinese, step-by-step + conclusion)"
+  require_claim_type: mechanistic
+
+- id: L3_003
+  level: L3
+  description: "Evidence-to-conclusion reasoning"
+  instruction_template: |
+    证据与结论如下：
+    证据方向：{evidence_direction}
+    推理链：{reasoning_chain}
+    结论：{claim_text}
+    请判断推理链的每一步是否都支持该结论；若某一步与结论冲突，指出并说明。输出为"步骤检查 + 总体判断"。
+  expected_output_type: "step-wise consistency check + overall verdict"
+  require_claim_type: mechanistic
+
+- id: L3_004
+  level: L3
+  description: "GC content - motif binding - activity chain reasoning"
+  instruction_template: |
+    已知科学结论：{claim_text}
+    该结论基于以下推理链：{reasoning_chain}
+    现在要回答一个更深层的问题：为什么 {tf}（{gc_class}，PWM中GC比例约{motif_gc}）结合位点与序列GC含量相关？
+    请分步推理：
+    1. 从基序自身的序列偏好（GC比例）出发，说明其更易在何种GC含量的序列中结合；
+    2. 结合统计证据（OR/命中率），说明 {tf} 在高GC序列中的富集/减少意味着什么；
+    3. 推导这对 {cell_line} 中顺式调控元件活性调控的生物学含义。
+    每步一句话，机制必须严格来自推理链，不得引入知识库之外的机制；最后用"因此"总结。
+  expected_output_type: "multi-step causal explanation (Chinese, GC-motif chain + conclusion)"

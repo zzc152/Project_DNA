@@ -8,7 +8,7 @@
     - 保存 shape_analysis_<CELL>.csv + shape_summary.json
 
 用法（项目根目录）:
-    python scripts/run_dna_shape_analysis.py
+    python scripts/analysis/run_dna_shape_analysis.py
 """
 
 from __future__ import annotations
@@ -96,7 +96,7 @@ def main() -> None:
     # 查询表
     table_path = ROOT / args.shape_table
     if not table_path.exists():
-        logger.error("查询表不存在: %s\n请先运行 scripts/extract_dna_shape_table.py", table_path)
+        logger.error("查询表不存在: %s\n请先运行 scripts/extract/extract_dna_shape_table.py", table_path)
         sys.exit(1)
     table = load_shape_table(table_path)
     lookup, col_idx = build_lookup_arrays(table)

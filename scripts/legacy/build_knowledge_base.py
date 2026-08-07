@@ -1,8 +1,13 @@
-"""从原始抽取结果构建知识三元组 knowledge_base.jsonl。
+"""[DEPRECATED] 从原始抽取结果构建知识三元组 knowledge_base.jsonl。
+
+⚠️ 已废弃：本脚本产出旧版 head/relation/tail 三元组格式。
+项目现统一使用 claim 版本知识库（knowledge_base_stat.jsonl，8 键 schema），
+由 scripts/build/build_stat_claims.py + scripts/build/build_literature_claims.py 构建。
+旧文件已移至 data/backup/。请勿再使用本脚本产出新知识。
 
 用法（在项目根目录运行）:
-    python scripts/build_knowledge_base.py                          # 默认输入
-    python scripts/build_knowledge_base.py --input data/processed/raw_extractions.jsonl
+    python scripts/legacy/build_knowledge_base.py                          # 默认输入
+    python scripts/legacy/build_knowledge_base.py --input data/processed/raw_extractions.jsonl
 """
 
 import argparse
