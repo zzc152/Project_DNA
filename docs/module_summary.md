@@ -192,4 +192,56 @@ python scripts/verify_l3_v2.py
 
 ---
 
+## 五、项目定位与阶段性评价
+
+### 5.1 定位（评审后修正）
+
+> 本项目**超过普通"调用 LLM API + 数据清洗"实习项目**，准确定位为：
+> **一个面向科学知识推理的高质量数据构建与评测 pipeline，有较强工程和研究设计价值**。
+> 尚未到"一篇独立方法论文"程度，但非常接近一个优秀研究型实习项目。
+
+### 5.2 真正的成果：不是 908 条数据，而是发现评测指标可能是假的
+
+核心叙事不是"我生成了 908 条数据"，而是 **"我建立了一套发现和修复 LLM 科学知识评测漏洞的方法"**。Benchmark 迭代 v1 → v2 → v2.1 对应三个典型的 evaluation failure：
+
+| 版本 | 评测失败类型 | 现象 | 修复 |
+|------|--------------|------|------|
+| **v1** | **信息泄露**（label leakage） | 题面包含答案线索 | 封闭式改造（基本 benchmark hygiene） |
+| **v2** | **选项偏差**（selection/option bias） | A:111 vs B:51 失衡，全猜 A 也能得不错 accuracy | 方向平衡（A/B 各半） |
+| **v2.1** | **过度自信/校准缺失**（calibration） | 模型"声称知道"但实际猜 | 允许答 E + 惩罚过度自信 + 诚实性指标 |
+
+**v2 的铁证**：7B 在 v1 的 0.596 acc 在平衡后暴跌至 know 型 0.048——说明原指标实际测的是 **Knowledge + Guessing**，而非 Knowledge。这直接对接 LLM evaluation 的重要方向（calibration / uncertainty awareness），比普通 benchmark 更深入。
+
+### 5.3 优势：完整闭环（研究思维）
+
+多数项目止步于"生成数据 → fine tune → 看 loss 下降"。本项目是完整闭环：
+
+```
+知识库 → 模板生成 → LLM 增强 → 质量过滤 → benchmark → 发现评测漏洞 → 修正数据 → 重新评估
+```
+
+### 5.4 已知不足（诚实记录）
+
+- **benchmark 规模偏小**（130 条评测样本），统计功效有限
+- **缺少 human / strong model baseline**（无法锚定"人类水平"与"scale 效应"）
+- **reasoning evaluation 仍偏 claim-level**：可能测到"模型学到了 claim schema"（如看到 `required_for` 就选强关系）而非真正科学推理
+- **数据量 908 条**：就"训练 foundation model"而言少，但本项目目标是验证 pipeline，人工审核体系的价值优先于盲目扩量（`modulates` 误标率 5/22 ≈ 22.7%，直接扩到 5000 条可能引入大量污染）
+
+### 5.5 下一步优先级（按价值排序）
+
+| 优先级 | 工作 | 理由 |
+|--------|------|------|
+| **P0** | **Claim 矛盾检测 benchmark**：给 Claim A（TF X 激活 enhancer Y）与 Claim B（Loss of X 增加 Y 表达），问是否冲突 | 最直接体现 scientific reasoning |
+| **P0** | **Evidence-level benchmark**：给 Evidence（RNA-seq 显示表达上调），问能否推出"A 调节 promoter 活性"（正确：不能） | 正好对应 D/E 类错误，与人工审核体系高度相关 |
+| **P1** | **Human baseline**：5 人 × 100 题 → Human 85% / 32B 65% / 7B 61% | 补全故事完整性，锚定模型差距 |
+| **P2** | **Adversarial 同义改写**：同一事实换表达（"Knockdown of X increased Y" → "Loss of X resulted in elevated Y"） | 检验模型是否真理解 vs 模式匹配 |
+| **P2** | 方案 2（D 档扩样 10.4% → ~30%） | 改善方向不明样本代表性，但非最高价值 |
+| **P3** | 72B 测试 | 有信息量（scale 是否有效）但成本高，收益低于提升 benchmark 质量 |
+
+### 5.6 面试叙事（推荐）
+
+> "我构建了一套科学知识生成与验证闭环，并发现现有 LLM 评测中存在严重的 guessing 和 overclaim 问题——通过 benchmark 迭代（v1 信息泄露 → v2 选项偏差 → v2.1 校准/诚实性）把模型真实能力拆解出来，并用数据质量修复（modulates 误标 22.7%）证明了评测有效性依赖标注质量。"
+
+---
+
 *文档状态：模块一 + 模块二最小实现总结（2026-08-07）。临时文件（tmp/、日志）、模型权重（models/、Qwen2.5-7B-Instruct/）不列入。*
