@@ -117,3 +117,21 @@ PYTHONPATH=src python scripts/verify_gold.py \
 ```
 
 产物：`data/synthetic/drafts_full2_clean_fixed.jsonl`、`data/processed/knowledge_base_clean_fixed.jsonl`、`tmp/fix_report.json`（逐条修复明细）。
+
+## 七、修复后数据统计（2026-08-08 生成）
+
+### drafts_full2_clean_fixed.jsonl（896 条）
+
+- level 分布：L1 192 / L2 192 / L3 192 / L4 192 / L5 128
+- **L3 effect 分布**：increases 63 / decreases 52 / required_for 51 / modulates 18 / None 8（L3_003 数据型）
+- **L3 direction 分布**：increases_activity 61 / decreases_activity 52 / required_for_activity 51 / modulates_activity 19 / binds_target 1 / 数据型 8
+- **L3 修复状态**：clean 162 / fixed 6 / t3_flag 21 / delete_candidate 3
+
+### knowledge_base_clean_fixed.jsonl（617 条）
+
+- **effect 分布**：increases 155 / decreases 153 / required_for 125 / modulates 27 / no_effect 2 / binds 2 / None 150 / 待删除 3（promotes 1 + co_occurs_with 1 + correlates 1）
+- **修复状态**：clean 598 / fixed 5 / delete_candidate 3 / flag 11（MYCN）
+
+### 数据文件位置
+
+修复后数据为**远程产物**（`/workspace/zzc/BioDesign-Agent/data/` 下），git 仓库仅含修复脚本与报告（数据文件不入库，与项目一贯约定一致）。如需本地副本，可用 `scp -P 11922 gf@122.207.108.8:<路径> <本地路径>`（需交互密码）。
