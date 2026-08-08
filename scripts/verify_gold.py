@@ -106,12 +106,21 @@ def t1_l3_evidence_consistency(l3_recs) -> dict:
 # ---------------------------------------------------------------------------
 
 def t2_kb_conflict(kb_recs) -> dict:
+    """同一 (factor, element) 对方向冲突。
+
+    升级：加入 target_gene 维度（若记录有 metadata.target_gene），
+    因为同因子对不同靶基因可以有真实相反的效应（如 MYCN 激活 MYC
+    靶基因、抑制神经元分化基因），此时不算标注冲突。
+    无 target_gene 的记录退回原 (factor, element) 分组。
+    """
     pairs = defaultdict(list)
     for k in kb_recs:
         e = k.get("entities", {})
-        key = (norm_ent(e.get("factor")), norm_ent(e.get("regulatory_element")))
-        if not key[0] or not key[1]:
+        key0 = (norm_ent(e.get("factor")), norm_ent(e.get("regulatory_element")))
+        if not key0[0] or not key0[1]:
             continue
+        tg = (k.get("metadata", {}) or {}).get("target_gene") or ""
+        key = (key0[0], key0[1], tg)
         pairs[key].append((e.get("effect"), e.get("cell_line")))
     conflicts = []
     for key, vals in pairs.items():
