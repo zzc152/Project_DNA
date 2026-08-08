@@ -198,3 +198,53 @@ extract(LLM) → validate(schema+词表+证据链) → curate(规则/人工) →
 | P7 对比困难 | 无版本 | 数据/评测/代码三绑定 |
 
 **一句话**：重构的核心不是"再多洗一遍数据"，而是**把约束从"事后验证"前移到"构造即强制"**——这 7 类问题大多会在写入 KB 之前就被 schema 和词表挡住。
+
+---
+
+## 七、三条判决落地实证（2026-08-08 晚）
+
+> 用户三条判决：**① 细胞系严格模式（只留 K562/HepG2/SK-N-SH）② JASPAR motif 词表受控（fail-closed）③ 组蛋白修饰禁止入 factor 槽（路径 A）**。
+> 实现：`scripts/curate_kb_vocab.py`（受控词表校验 + 细胞系严格过滤 + 打回队列），已跑通真实 KB。
+
+### 7.1 判决 ①：细胞系严格模式
+
+- 只接受 `K562 / HepG2 / SK-N-SH` 三种细胞系（本项目实验数据来源）
+- `not_specified` → 打回 `cell_line_not_specified`（338 条，占 55%——**严格模式最大杀伤面**，全部待人工裁决补细胞系或删除）
+- 其他细胞系（SH-SY5Y、HEK293T、小鼠等）→ `cell_line_out_of_scope`
+- **教训**：旧抽取器允许"无细胞系"输出，导致过半记录无法用于严格评测。重构后抽取 prompt 已强制 cell_line 必填且限三系。
+
+### 7.2 判决 ②：JASPAR motif 词表受控
+
+- 词表：`data/vocab/jaspar2024_vertebrates_core.json`（JASPAR2024 脊椎动物 CORE，2059 个 motif，1062 个唯一 TF 名）
+- 匹配规则（`check_vocab`）：
+  - **精确**：`ETS1` → `ETS1`
+  - **复合体拆分**：`TAL1` → 命中 `GATA1::TAL1` / `TAL1::TCF3`
+  - **家族前缀**：`CREB` → 命中 `CREB1`
+  - **别名映射**：`SREBP1` → `SREBF1`（JASPAR 用 HGNC 正式名）
+- 染色质修饰酶（HDAC2/DNMT1/ALKBH5/WDR5 等，**JASPAR 不收非 DNA 结合蛋白**）→ 修正 `factor_type=enzyme`，豁免词表
+- **双 schema 发现**：KB 614 条其实是**三种 schema 混合**——标准（factor+cell_line）、MPRA（tf+motif+cell_line，motif 自带 JASPAR ID）、序列特征（gc_range/feature/shape）。**这是生成管线不规范的新实锤**：同一份 KB 里混入不同来源的记录格式。
+
+### 7.3 判决 ③：组蛋白修饰禁止入 factor 槽（路径 A）
+
+- `factor_wrong_type` 17 条全部拦截：H3K4me3/H3K27ac/H3K4me1/DNA methylation/H3 acetylation/H3K4 trimethylation/乙酰化-去甲基化 agent
+- 同时拦截**噪声实体**：氨基酸突变（S87N/R89W/R85W/R85Q，`factor_mutation`）、药物/蛋白片段（VPA/N1IC/NUP153，`factor_noise`）、多实体列表与描述性短语（`factor_phrase`：`POLR2A, MYC, YY1`、`TLR4 downstream NF-κB p65 and c-Jun`、`GATA1, TAL1, and C/EBPβ`）
+- `FOG1`（ZFPM1 辅因子，不直接结合 DNA）不在 JASPAR → 打回正确
+
+### 7.4 清洗实证结果（KB 614 条）
+
+| 分桶 | 数量 | 说明 |
+|------|------|------|
+| **kept（通过）** | **70** | 标准 TF/motif，JASPAR 命中 |
+| kept_mpra | 77 | MPRA 记录，motif_id 词表命中 |
+| kept_sequence_feature | 52 | GC/序列特征分析（无 factor 槽） |
+| kept_enzyme | 8 | 染色质修饰酶（豁免词表） |
+| cell_line_not_specified | 338 | 无细胞系，待人工 |
+| cell_line_out_of_scope | 7 | 非三系 |
+| gc/mpra 细胞系出范围 | 17 | GC/MPRA 记录的非三系 |
+| factor_wrong_type | 17 | 修饰标记当因子（路径 A） |
+| factor_phrase | 11 | 多实体/描述性短语 |
+| factor_mutation | 8 | 氨基酸突变 |
+| factor_noise | 7 | 药物/蛋白片段/区域名 |
+| factor_vocab_miss | 2 | FOG1（辅因子非 TF） |
+
+**结论**：207 条（34%）通过、407 条（66%）打回，全部有结构化理由 → **打回队列 = 下一步人工裁决的输入**（`tmp/curation/kb_rejected.jsonl`）。严格模式按用户"做精而小"原则执行，宁缺毋滥。

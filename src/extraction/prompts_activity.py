@@ -41,28 +41,47 @@ ACTIVITY_SYSTEM_PROMPT = (
     "one. (4) The mechanism and effect must be supported by the abstract, "
     "not by general biology knowledge. (5) Use only the controlled "
     "vocabulary for effect. (6) Quote the evidence sentence verbatim from "
-    "the abstract (you may trim it, but do not paraphrase into new words)."
+    "the abstract (you may trim it, but do not paraphrase into new words).\n"
+    "BASIC BIOLOGY CONSTRAINTS (MUST KNOW): A 'factor' must be an ACTING "
+    "entity — something that does something to the element: a "
+    "transcription factor (GATA1, HNF4A), a DNA motif (E-box, GATA motif), "
+    "a chromatin-modifying ENZYME (SETD1A, HDAC1), or a sequence feature "
+    "(GC content, DNA shape). Histone modifications (H3K27ac, H3K4me3), "
+    "DNA methylation, and chromatin accessibility are STATES/MARKS left on "
+    "the DNA by enzymes — they are NOT acting entities and MUST NEVER be "
+    "extracted as 'factor'. If an abstract says 'H3K4me3 is enriched at "
+    "active enhancers', the acting factor is the enzyme that deposits the "
+    "mark (if named) or the mark is only context — do NOT make the mark "
+    "the factor. NEVER use generic phrases ('transcription factors', "
+    "'epigenetic status', 'the regulatory machinery') as a factor."
 )
 
 ACTIVITY_FIELD_DEFINITIONS = (
     'Definitions of the JSON fields:\n'
     '- "cell_line": one of "K562", "HepG2", "SK-N-SH", or "not_specified". '
-    'Use the exact cell line name if the abstract states experiments in '
-    'K562, HepG2, or SK-N-SH cells. If the abstract studies other cells '
-    '(e.g. HEK293T, mouse cells) or no cells at all, use "not_specified". '
-    'NEVER infer a cell line that is not named.\n'
+    'Use the exact cell line name ONLY if the abstract states experiments '
+    'in K562, HepG2, or SK-N-SH cells. IMPORTANT: this project only '
+    'accepts these three cell lines. If the abstract studies OTHER cells '
+    '(e.g. HEK293T, mouse cells, primary cells), that finding is OUT OF '
+    'SCOPE — do NOT emit it. If the abstract gives no cell line at all, '
+    'use "not_specified". NEVER infer or guess a cell line.\n'
     '- "regulatory_element": the type of regulatory element whose activity '
     'is discussed, e.g. "enhancer", "promoter", "cis-regulatory element", '
     '"enhancer-promoter interaction", "silencer", "insulator", "locus '
     'control region". Use a concise lowercase term that matches the paper. '
     'Do not invent elements not mentioned.\n'
-    '- "factor": the specific entity that affects the element activity — '
-    'a transcription factor (e.g. GATA1, KLF1, HNF4A, NEUROG2), a DNA '
-    'motif (e.g. E-box, GATA motif), a sequence feature (e.g. GC content, '
-    'DNA shape, motif position), or an epigenetic mark (e.g. H3K27ac, '
-    'DNA methylation, chromatin accessibility). Use the exact name from '
-    'the abstract. Do NOT use generic terms like "transcription factors", '
-    '"chromatin", "the motif" unless that is all the abstract says.\n'
+    '- "factor": the ACTING entity that affects the element activity. '
+    'Allowed types: (a) a transcription factor (e.g. GATA1, KLF1, HNF4A, '
+    'NEUROG2); (b) a DNA motif (e.g. E-box, GATA motif) — use the motif '
+    'name from the abstract; (c) a chromatin-modifying enzyme (e.g. '
+    'SETD1A, HDAC1, G9a); (d) a sequence feature (e.g. GC content, DNA '
+    'shape, motif position). FORBIDDEN as factor: histone modifications '
+    '(H3K27ac, H3K4me3, H3K9me3...), DNA methylation, chromatin '
+    'accessibility/state, and any generic phrase ("transcription '
+    'factors", "epigenetic status", "the machinery"). A mark/state is '
+    'the RESULT of an acting enzyme, not an actor itself. If the only '
+    '"factor" mentioned is a mark/state, do not emit that finding (or, if '
+    'the abstract names the depositing enzyme, use the enzyme as factor).\n'
     '- "effect": the direction of influence, from this controlled set:\n'
     '    "increases"     — factor boosts element activity/expression\n'
     '    "decreases"     — factor reduces element activity/expression\n'
@@ -99,6 +118,15 @@ CORRECT JSON: {"findings": []}
 Abstract: "HNF4A binding is required for hepatocyte-specific enhancer activity."  (no cell line is named in the abstract)
 WRONG JSON (do NOT output): {"findings": [{"cell_line": "HepG2", "regulatory_element": "enhancer", "factor": "HNF4A", "effect": "required_for", "mechanism": "HNF4A is a liver-enriched factor that activates hepatocyte enhancers.", "evidence_sentence": "HNF4A binding is required for hepatocyte-specific enhancer activity."}]}
 CORRECT JSON: {"findings": [{"cell_line": "not_specified", "regulatory_element": "enhancer", "factor": "HNF4A", "effect": "required_for", "mechanism": "HNF4A binding is required for hepatocyte-specific enhancer activity.", "evidence_sentence": "HNF4A binding is required for hepatocyte-specific enhancer activity."}]}
+
+=== EXAMPLE 5 (WRONG - histone mark used as factor, NEVER do this) ===
+Abstract: "In HEK293T cells, H3K4me3 is enriched at active super-enhancers, and depletion of the methyltransferase RYBP impairs H3K4me3 deposition."  (cell line is HEK293T — out of scope; the mark H3K4me3 is not an acting factor)
+WRONG JSON (do NOT output): {"findings": [{"cell_line": "HEK293T", "regulatory_element": "super-enhancer", "factor": "H3K4me3", "effect": "required_for", "mechanism": "H3K4me3 marks active super-enhancers.", "evidence_sentence": "H3K4me3 is enriched at active super-enhancers."}]}
+CORRECT JSON: {"findings": []}   (HEK293T is out of scope; H3K4me3 is a mark, not a factor)
+
+=== EXAMPLE 6 (correct - enzyme as factor for a mark) ===
+Abstract: "Depletion of the histone methyltransferase SETD1A in K562 cells reduced H3K4me3 levels at the beta-globin enhancer and decreased enhancer-driven reporter activity."
+JSON: {"findings": [{"cell_line": "K562", "regulatory_element": "enhancer", "factor": "SETD1A", "effect": "increases", "mechanism": "SETD1A deposits H3K4me3 at the beta-globin enhancer; its depletion reduces H3K4me3 levels and enhancer-driven reporter activity.", "evidence_sentence": "Depletion of the histone methyltransferase SETD1A in K562 cells reduced H3K4me3 levels at the beta-globin enhancer and decreased enhancer-driven reporter activity."}]}
 """
 
 ACTIVITY_USER_TEMPLATE = (
